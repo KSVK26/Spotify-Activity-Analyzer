@@ -174,6 +174,8 @@ def top_artists_history(df, top_artists_df=10):
     ax.set_title(f'Top {len(top_artists_df)} Artists Streaming History')
     ax.set_ylabel("No. of Streams")
 
+    return df_top
+
 def file2df(stream_file_list):
     dfs = []
     for f_name in stream_file_list:
@@ -184,6 +186,29 @@ def file2df(stream_file_list):
     df = pd.concat(dfs, sort=False)
     return df 
 
+def top_artists_most_days(df, top=10):
+    df['endTime'] = pd.to_datetime(df['endTime'])
+    df['date'] = pd.to_datetime(df['endTime'].dt.strftime('%Y-%m-%d'))
+    df.drop(columns=['msPlayed', 'endTime', 'trackName'],inplace=True)
+    df.drop_duplicates(inplace=True)
+
+    df = df.groupby('artistName',as_index=False) \
+        .agg({'date':'count'}) \
+        .rename(columns={'date':'noDays'})
+    df.sort_values(by=['noDays'],ascending=False,inplace=True)
+
+    df = df.head(top)
+
+    width = 0.7
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_title(f'Top {top} Artists by Most Days Listened')
+    ax.set_ylabel('No. of Days')
+    bar1 = ax.bar(df['artistName'],df['noDays'],width,color='r')
+    fig.autofmt_xdate()
+    
+    return df
+    
 def main(stream_file_list):
     print(stream_file_list)
     df = file2df(stream_file_list)
@@ -199,6 +224,8 @@ def main(stream_file_list):
     print(df_top_tracks)
     df_top_artists_history = top_artists_history(df,df_top_artists.head(5))
     print(df_top_artists_history)
+    df_top_artists_most_days = top_artists_most_days(df,10)
+    print(df_top_artists_most_days)
     plt.show()
 
 if __name__ == "__main__":
