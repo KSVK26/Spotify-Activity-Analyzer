@@ -155,6 +155,25 @@ def top_tracks(df, top=10):
     print(df_top)
     return df_top
 
+def top_artists_history(df, top_artists_df=10):
+    df_top = df[df['artistName'].isin(top_artists_df['artistName'])]
+    df_top['endTime'] = pd.to_datetime(df_top['endTime'])
+
+    df_top['date'] = pd.to_datetime(df_top['endTime'].dt.strftime('%Y-%m-%d'))
+    df_top = df_top.groupby(['artistName','date'],as_index=False) \
+        .agg({'endTime':'count'}) \
+        .rename(columns={'endTime':'noStreams'})
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    for artist in top_artists_df['artistName']:
+        df_tmp = df_top[df_top['artistName'] == artist]
+        ax.plot(df_tmp['date'],df_tmp['noStreams'],'-o',label=artist)
+    ax.legend()
+    ax.set_title(f'Top {len(top_artists_df)} Artists Streaming History')
+    ax.set_ylabel("No. of Streams")
+
 def file2df(stream_file_list):
     dfs = []
     for f_name in stream_file_list:
@@ -170,14 +189,16 @@ def main(stream_file_list):
     df = file2df(stream_file_list)
     df.rename(columns={'ts':'endTime','master_metadata_album_artist_name':'artistName','master_metadata_track_name': 'trackName','ms_played':'msPlayed'}, inplace=True)
     print(df)
-    df2 = listen_time_per_day(df)
-    print(df2)
-    df3 = avg_day_load(df)
-    print(df3)
-    df4 = top_artists(df,10)
-    print(df4)
-    df5 = top_tracks(df,10)
-    print(df5)
+    df_listen_time = listen_time_per_day(df)
+    print(df_listen_time)
+    df_avg_day = avg_day_load(df)
+    print(df_avg_day)
+    df_top_artists = top_artists(df,10)
+    print(df_top_artists)
+    df_top_tracks = top_tracks(df,10)
+    print(df_top_tracks)
+    df_top_artists_history = top_artists_history(df,df_top_artists.head(5))
+    print(df_top_artists_history)
     plt.show()
 
 if __name__ == "__main__":
@@ -185,8 +206,8 @@ if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
     all_files = [os.path.join(base_dir, f) for f in os.listdir(base_dir)
                  if f.startswith("Streaming_History_Audio") and f.lower().endswith('.json')]
-    print(f"All files found: {all_files}")
+    # print(f"All files found: {all_files}")
     if all_files:
         main(all_files)
     else:
-        print(f"No JSON file found or no file with the naming conversion StreamingHistory_.json found")
+        print(f"No JSON file found or no file with the naming conversion Streaming_History_Audio.json found")
