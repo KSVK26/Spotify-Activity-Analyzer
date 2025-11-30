@@ -187,10 +187,10 @@ def file2df(stream_file_list):
     return df 
 
 def top_artists_most_days(df, top=10):
+    df = df.copy()
     df['endTime'] = pd.to_datetime(df['endTime'])
     df['date'] = pd.to_datetime(df['endTime'].dt.strftime('%Y-%m-%d'))
-    df.drop(columns=['msPlayed', 'endTime', 'trackName'],inplace=True)
-    df.drop_duplicates(inplace=True)
+    df = df[['artistName', 'date']].drop_duplicates()
 
     df = df.groupby('artistName',as_index=False) \
         .agg({'date':'count'}) \
