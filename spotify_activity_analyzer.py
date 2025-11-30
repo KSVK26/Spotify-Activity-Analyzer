@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.cbook as cbook
 import seaborn
+import numpy as np
 
 seaborn.set()
 
@@ -90,6 +91,39 @@ def avg_day_load(df):
 
     return df_week_sum
 
+def df_top_artists(df, top=10):
+    print("Top Artists")
+    df_top=df.groupby('artistName',as_index=False) \
+        .agg({'endTime':'count','msPlayed':'sum'}) \
+        .rename(columns={'endTime':'noStreams','msPlayed':'streamTimeMs'})
+    df_top['streamTimeHr'] = ms2hr(df_top['streamTimeMs'])
+    df_top = df_top.sort_values(by=['noStreams'], ascending=False)
+    df_top = df_top.head(top)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax2 = ax.twinx()
+    ax2.grid(False)
+
+    width = 0.27
+    ind = np.arange(len(df_top))
+
+    bar1 = ax.bar(ind, df_top['noStreams'], width, color = 'r', label='No. of Streams')
+    bar2 = ax2.bar(ind + width, df_top['streamTimeHr'], width, color = 'b', label='Stream Time (Hr)')
+    fig.legend(loc='upper right')
+
+    ax.set_xticks(ind + width)
+
+    ax.set_xticklabels(df_top['artistName'])
+    ax.set_title(f'Top {top} Artists by No. of Streams')
+    ax.set_ylabel('No. of Streams')
+
+    ax2.set_ylabel('Stream Time (Hr)')
+    fig.autofmt_xdate()
+
+    print(df_top)
+    return df_top
+
 def file2df(stream_file_list):
     dfs = []
     for f_name in stream_file_list:
@@ -103,15 +137,18 @@ def file2df(stream_file_list):
 def main(stream_file_list):
     print(stream_file_list)
     df = file2df(stream_file_list)
-    df.rename(columns={'ts':'endTime','ms_played':'msPlayed'}, inplace=True)
+    df.rename(columns={'ts':'endTime','master_metadata_album_artist_name':'artistName','ms_played':'msPlayed'}, inplace=True)
     print(df)
     df2 = listen_time_per_day(df)
     print(df2)
     df3 = avg_day_load(df)
     print(df3)
+    df4 = df_top_artists(df,20)
+    print(df4)
     plt.show()
 
 if __name__ == "__main__":
+# TODO: Change json file fetching to get it from the Spotify Extended Streaming History folder
     base_dir = os.path.dirname(os.path.abspath(__file__))
     all_files = [os.path.join(base_dir, f) for f in os.listdir(base_dir)
                  if f.startswith("Streaming_History_Audio") and f.lower().endswith('.json')]
