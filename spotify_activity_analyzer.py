@@ -3,7 +3,6 @@ import os
 import json
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import matplotlib.cbook as cbook
 import seaborn
 import numpy as np
 
@@ -12,41 +11,15 @@ seaborn.set()
 def ms2hr(ms_val):
     return ms_val / (1000 * 60 * 60)
 
-# def listen_time_per_day(df):
-#     df['endTime'] = pd.to_datetime(df['endTime'])
-#     df['endTime'] = pd.to_datetime(df['endTime'].dt.strftime('%Y-%m-%d'))
-#     df_time = df[['endTime', 'msPlayed']]
-#     df_time_sum = df_time.groupby(['endTime'], as_index=False).agg({'msPlayed': 'sum'}) 
-    
-#     df_time_sum['hrPlayed'] = ms2hr(df_time_sum['msPlayed'])
-
-#     fig, ax = plt.subplots(1,1)
-#     ax.bar('endTime', 'hrPlayed', data=df_time_sum)
-#     ax.set_title('Spotify Listening Time Per Day')
-#     ax.set_xlabel('Date')
-#     ax.set_ylabel('Hours Played')
-#     fmt_month = mdates.MonthLocator(interval=1)
-#     ax.xaxis.set_major_locator(fmt_month)
-#     ax.grid(True)
-#     fig.autofmt_xdate()
-
-#     return df_time_sum
-
 def load_over_time(df):
-    # convert string datetime to datetime format
     df['endTime'] = pd.to_datetime(df['endTime'])
-
-    # change datetime format to only date
     df['endTime'] = pd.to_datetime(df['endTime'].dt.strftime("%Y-%m-%d"))
 
-    # get only date and duration of stream
     df_time = df[['endTime', 'msPlayed']]
 
-    # sum daily hours of spotify 
     df_time_sum = df_time.groupby(['endTime'], as_index=False).agg({'msPlayed': 'sum'})
     df_time_sum['hrPlayed'] = df_time_sum['msPlayed'] / (1000 * 60 * 60)
 
-    #df_time_sum.info()
     return df_time_sum
 
 def plot_df(df, x, y, title=None, y_label=None):
@@ -58,18 +31,14 @@ def plot_df(df, x, y, title=None, y_label=None):
     if y_label is not None:
         ax.set_ylabel(y_label)
 
-    # Major ticks every 6 months.
     fmt_month = mdates.MonthLocator(interval=1)
     ax.xaxis.set_major_locator(fmt_month)
 
-    # Minor ticks every month.
     fmt_day = mdates.DayLocator()
     ax.xaxis.set_minor_locator(fmt_day)
 
     ax.grid(True)
 
-    # Rotates and right aligns the x labels, and moves the bottom of the
-    # axes up to make room for them.
     fig.autofmt_xdate()
 
 def avg_day_load(df):
@@ -93,7 +62,7 @@ def avg_day_load(df):
     df_week_sum['noStreamsAvg'] = df_week_sum['noStreams'] / df_week_sum['dayCount']
     df_week_sum['lenStreamsAvgMin'] = df_week_sum['msPlayed'] / df_week_sum['noStreams'] / (1000 * 60)
 
-    print(df_week_sum)
+    # print(df_week_sum)
 
     df_week_sum = df_week_sum.drop(columns=['msPlayed','hrPlayed','noStreams','dayCount'])
 
@@ -130,7 +99,7 @@ def avg_day_load(df):
     return df_week_sum
 
 def top_artists(df, top=10):
-    print("Top Artists")
+    # print("Top Artists")
     df_top=df.groupby('artistName',as_index=False) \
         .agg({'endTime':'count','msPlayed':'sum'}) \
         .rename(columns={'endTime':'noStreams','msPlayed':'streamTimeMs'})
@@ -159,11 +128,11 @@ def top_artists(df, top=10):
     ax2.set_ylabel('Stream Time (Hr)')
     fig.autofmt_xdate()
 
-    print(df_top)
+    # print(df_top)
     return df_top
 
 def top_tracks(df, top=10):
-    print("Top Tracks")
+    # print("Top Tracks")
     df_top=df.groupby(['artistName','trackName'],as_index=False) \
         .agg({'endTime':'count','msPlayed':'sum'}) \
         .rename(columns={'endTime':'noStreams','msPlayed':'streamTimeMs'})
@@ -192,7 +161,7 @@ def top_tracks(df, top=10):
     ax2.set_ylabel('Stream Time (Hr)')
     fig.autofmt_xdate()
 
-    print(df_top)
+    # print(df_top)
     return df_top
 
 def top_artists_history(df, top_artists_df=10):
@@ -250,28 +219,33 @@ def top_artists_most_days(df, top=10):
     return df
     
 def main(stream_file_list):
-    print(stream_file_list)
+    # print(stream_file_list)
     df = file2df(stream_file_list)
-    df.rename(columns={'ts':'endTime','master_metadata_album_artist_name':'artistName','master_metadata_track_name': 'trackName','ms_played':'msPlayed'}, inplace=True)
-    print(df)
+    df.rename(columns={'ts':'endTime','master_metadata_album_artist_name':'artistName',
+                       'master_metadata_track_name': 'trackName','ms_played':'msPlayed'}, 
+                       inplace=True)
+    # print(df)
     df_listen_time = load_over_time(df)
-    print(df_listen_time)
-    plot_df(df_listen_time, 'endTime', 'hrPlayed',title=f"Listening time to Spotify streams per day: {df['endTime'].dt.strftime('%Y').iloc[1]} onwards",y_label='Hours [h]')
+    # print(df_listen_time)
+    plot_df(df_listen_time, 'endTime', 'hrPlayed',
+            title=f"Listening time to Spotify streams per day: {df['endTime'].dt.strftime('%Y').iloc[1]} onwards",
+            y_label='Hours [h]')
     df_avg_day = avg_day_load(df)
-    print(df_avg_day)
+    # print(df_avg_day)
     df_top_artists = top_artists(df,10)
-    print(df_top_artists)
+    # print(df_top_artists)
     df_top_tracks = top_tracks(df,10)
-    print(df_top_tracks)
+    # print(df_top_tracks)
     df_top_artists_history = top_artists_history(df,df_top_artists.head(5))
-    print(df_top_artists_history)
+    # print(df_top_artists_history)
     df_top_artists_most_days = top_artists_most_days(df,10)
-    print(df_top_artists_most_days)
+    # print(df_top_artists_most_days)
     plt.show()
 
 if __name__ == "__main__":
-# TODO: Change json file fetching to get it from the Spotify Extended Streaming History folder
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.join(base_dir, 'Spotify Extended Streaming History')
+    print(base_dir)
     all_files = [os.path.join(base_dir, f) for f in os.listdir(base_dir)
                  if f.startswith("Streaming_History_Audio") and f.lower().endswith('.json')]
     # print(f"All files found: {all_files}")
