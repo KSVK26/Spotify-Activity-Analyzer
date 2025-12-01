@@ -12,25 +12,65 @@ seaborn.set()
 def ms2hr(ms_val):
     return ms_val / (1000 * 60 * 60)
 
-def listen_time_per_day(df):
-    df['endTime'] = pd.to_datetime(df['endTime'])
-    df['endTime'] = pd.to_datetime(df['endTime'].dt.strftime('%Y-%m-%d'))
-    df_time = df[['endTime', 'msPlayed']]
-    df_time_sum = df_time.groupby(['endTime'], as_index=False).agg({'msPlayed': 'sum'}) 
+# def listen_time_per_day(df):
+#     df['endTime'] = pd.to_datetime(df['endTime'])
+#     df['endTime'] = pd.to_datetime(df['endTime'].dt.strftime('%Y-%m-%d'))
+#     df_time = df[['endTime', 'msPlayed']]
+#     df_time_sum = df_time.groupby(['endTime'], as_index=False).agg({'msPlayed': 'sum'}) 
     
-    df_time_sum['hrPlayed'] = ms2hr(df_time_sum['msPlayed'])
+#     df_time_sum['hrPlayed'] = ms2hr(df_time_sum['msPlayed'])
 
-    fig, ax = plt.subplots(1,1)
-    ax.bar('endTime', 'hrPlayed', data=df_time_sum)
-    ax.set_title('Spotify Listening Time Per Day')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Hours Played')
+#     fig, ax = plt.subplots(1,1)
+#     ax.bar('endTime', 'hrPlayed', data=df_time_sum)
+#     ax.set_title('Spotify Listening Time Per Day')
+#     ax.set_xlabel('Date')
+#     ax.set_ylabel('Hours Played')
+#     fmt_month = mdates.MonthLocator(interval=1)
+#     ax.xaxis.set_major_locator(fmt_month)
+#     ax.grid(True)
+#     fig.autofmt_xdate()
+
+#     return df_time_sum
+
+def load_over_time(df):
+    # convert string datetime to datetime format
+    df['endTime'] = pd.to_datetime(df['endTime'])
+
+    # change datetime format to only date
+    df['endTime'] = pd.to_datetime(df['endTime'].dt.strftime("%Y-%m-%d"))
+
+    # get only date and duration of stream
+    df_time = df[['endTime', 'msPlayed']]
+
+    # sum daily hours of spotify 
+    df_time_sum = df_time.groupby(['endTime'], as_index=False).agg({'msPlayed': 'sum'})
+    df_time_sum['hrPlayed'] = df_time_sum['msPlayed'] / (1000 * 60 * 60)
+
+    #df_time_sum.info()
+    return df_time_sum
+
+def plot_df(df, x, y, title=None, y_label=None):
+    fig, ax = plt.subplots(1, 1)
+    ax.bar(x, y, data=df)
+
+    if title is not None:
+        ax.set_title(title)
+    if y_label is not None:
+        ax.set_ylabel(y_label)
+
+    # Major ticks every 6 months.
     fmt_month = mdates.MonthLocator(interval=1)
     ax.xaxis.set_major_locator(fmt_month)
-    ax.grid(True)
-    fig.autofmt_xdate()
 
-    return df_time_sum
+    # Minor ticks every month.
+    fmt_day = mdates.DayLocator()
+    ax.xaxis.set_minor_locator(fmt_day)
+
+    ax.grid(True)
+
+    # Rotates and right aligns the x labels, and moves the bottom of the
+    # axes up to make room for them.
+    fig.autofmt_xdate()
 
 def avg_day_load(df):
     df['endTime'] = pd.to_datetime(df['endTime'])
@@ -214,8 +254,9 @@ def main(stream_file_list):
     df = file2df(stream_file_list)
     df.rename(columns={'ts':'endTime','master_metadata_album_artist_name':'artistName','master_metadata_track_name': 'trackName','ms_played':'msPlayed'}, inplace=True)
     print(df)
-    df_listen_time = listen_time_per_day(df)
+    df_listen_time = load_over_time(df)
     print(df_listen_time)
+    plot_df(df_listen_time, 'endTime', 'hrPlayed',title=f"Listening time to Spotify streams per day: {df['endTime'].dt.strftime('%Y').iloc[1]} onwards",y_label='Hours [h]')
     df_avg_day = avg_day_load(df)
     print(df_avg_day)
     df_top_artists = top_artists(df,10)
