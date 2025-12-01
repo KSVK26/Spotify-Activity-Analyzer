@@ -245,10 +245,11 @@ def main(stream_file_list):
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.join(base_dir, 'Spotify Extended Streaming History')
-    print(base_dir)
     all_files = [os.path.join(base_dir, f) for f in os.listdir(base_dir)
-                 if f.startswith("Streaming_History_Audio") and f.lower().endswith('.json')]
-    # print(f"All files found: {all_files}")
+                 if f.startswith("Streaming_History_") and f.lower().endswith('.json')]
+    # for file in all_files:
+    #     print(f"File found: {file}")
+
     if all_files:
         main(all_files)
     else:
