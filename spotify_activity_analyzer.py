@@ -98,7 +98,7 @@ def avg_day_load(df):
 
     return df_week_sum
 
-def top_artists(df, top=10):
+def top_artists(df, top=10, date_desc=''):
     # print("Top Artists")
     df_top=df.groupby('artistName',as_index=False) \
         .agg({'endTime':'count','msPlayed':'sum'}) \
@@ -122,7 +122,7 @@ def top_artists(df, top=10):
     ax.set_xticks(ind + width)
 
     ax.set_xticklabels(df_top['artistName'])
-    ax.set_title(f'Top {top} Artists by No. of Streams')
+    ax.set_title(f'Top {top} Artists by No. of Streams {date_desc}')
     ax.set_ylabel('No. of Streams')
 
     ax2.set_ylabel('Stream Time (Hr)')
@@ -131,7 +131,7 @@ def top_artists(df, top=10):
     # print(df_top)
     return df_top
 
-def top_tracks(df, top=10):
+def top_tracks(df, top=10, date_desc=''):
     # print("Top Tracks")
     df_top=df.groupby(['artistName','trackName'],as_index=False) \
         .agg({'endTime':'count','msPlayed':'sum'}) \
@@ -155,7 +155,7 @@ def top_tracks(df, top=10):
 
     ax.set_xticks(ind + width)
     ax.set_xticklabels(df_top['fullName'])
-    ax.set_title(f'Top {top} Tracks by No. of Streams')
+    ax.set_title(f'Top {top} Tracks by No. of Streams {date_desc}')
     ax.set_ylabel('No. of Streams')
 
     ax2.set_ylabel('Stream Time (Hr)')
@@ -164,7 +164,7 @@ def top_tracks(df, top=10):
     # print(df_top)
     return df_top
 
-def top_artists_history(df, top_artists_df=10):
+def top_artists_history(df, top_artists_df=10, date_desc=''):
     df_top = df[df['artistName'].isin(top_artists_df['artistName'])]
     df_top['endTime'] = pd.to_datetime(df_top['endTime'])
 
@@ -180,7 +180,7 @@ def top_artists_history(df, top_artists_df=10):
         df_tmp = df_top[df_top['artistName'] == artist]
         ax.plot(df_tmp['date'],df_tmp['noStreams'],'-o',label=artist)
     ax.legend()
-    ax.set_title(f'Top {len(top_artists_df)} Artists Streaming History')
+    ax.set_title(f'Top {len(top_artists_df)} Artists Streaming History {date_desc}')
     ax.set_ylabel("No. of Streams")
 
     return df_top
@@ -195,7 +195,7 @@ def file2df(stream_file_list):
     df = pd.concat(dfs, sort=False)
     return df 
 
-def top_artists_most_days(df, top=10):
+def top_artists_most_days(df, top=10, date_desc=''):
     df = df.copy()
     df['endTime'] = pd.to_datetime(df['endTime'])
     df['date'] = pd.to_datetime(df['endTime'].dt.strftime('%Y-%m-%d'))
@@ -211,7 +211,7 @@ def top_artists_most_days(df, top=10):
     width = 0.7
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.set_title(f'Top {top} Artists by Most Days Listened')
+    ax.set_title(f'Top {top} Artists by Most Days Listened {date_desc}')
     ax.set_ylabel('No. of Days')
     bar1 = ax.bar(df['artistName'],df['noDays'],width,color='r')
     fig.autofmt_xdate()
@@ -220,6 +220,7 @@ def top_artists_most_days(df, top=10):
 
 def choose_date_range(df):
     while True:
+        print("Choose Date Range for Analysis:")
         print("1. Full History")
         print("2. Choose a Date Range")
         print("3. Choose a Specific Year")
@@ -228,53 +229,74 @@ def choose_date_range(df):
         choice = input("Select an option (1-5): ")
         df['endTime'] = pd.to_datetime(df['endTime'])
         if choice == '1':
-            return df
+            return 1,df,f'Full History'
         
         elif choice == '2':
             start_date = input("Enter start date (YYYY-MM-DD): ")
+            if start_date not in df['endTime'].dt.strftime('%Y-%m-%d').values:
+                print("Error: Start date not in data range.")
+                continue
             end_date = input("Enter end date (YYYY-MM-DD): ")
-            return df[(df['endTime'] >= start_date) & (df['endTime'] <= end_date)]
+            if end_date not in df['endTime'].dt.strftime('%Y-%m-%d').values:
+                print("Error: End date not in data range.")
+                continue
+            if start_date > end_date:
+                print("Error: Start date must be before end date.")
+                continue
+            return 1,df[(df['endTime'] >= start_date) & (df['endTime'] <= end_date)],f'from {start_date} to {end_date}'
         
         elif choice == '3':
             year = input("Enter year (YYYY): ")
-            return df[df['endTime'].dt.year == int(year)]
+            if year not in df['endTime'].dt.strftime('%Y').values:
+                print("Error: Year not in data range.")
+                continue
+            return 1,df[df['endTime'].dt.year == int(year)],f'for the year {year}'
         
         elif choice == '4':
             year = input("Enter year (YYYY): ")
+            if year not in df['endTime'].dt.strftime('%Y').values:
+                print("Error: Year not in data range.")
+                continue
             month = input("Enter month (1-12): ")
-            return df[(df['endTime'].dt.year == int(year)) & (df['endTime'].dt.month == int(month))]
+            if month.zfill(2) not in df['endTime'].dt.strftime('%m').values[df['endTime'].dt.strftime('%Y') == year]:
+                print("Error: Month not in data range for the specified year.")
+                continue
+            return 1,df[(df['endTime'].dt.year == int(year)) & (df['endTime'].dt.month == int(month))],f'for {year}-{month.zfill(2)}'
         
         elif choice == '5':
             print("Exiting...")
-            exit()
+            return 0,df,''
     
 def main(stream_file_list):
+    while True:
+        # print(stream_file_list)
+        df = file2df(stream_file_list)
+        df.rename(columns={'ts':'endTime','master_metadata_album_artist_name':'artistName',
+                        'master_metadata_track_name': 'trackName','ms_played':'msPlayed'}, 
+                        inplace=True)
+        
+        end, df_date, date_desc = choose_date_range(df)
 
-
-    # print(stream_file_list)
-    df = file2df(stream_file_list)
-    df.rename(columns={'ts':'endTime','master_metadata_album_artist_name':'artistName',
-                       'master_metadata_track_name': 'trackName','ms_played':'msPlayed'}, 
-                       inplace=True)
-    
-    df_date = choose_date_range(df)
-    # print(df)
-    df_listen_time = load_over_time(df_date)
-    # print(df_listen_time)
-    plot_df(df_listen_time, 'endTime', 'hrPlayed',
-            title=f"Listening time to Spotify streams per day: {df_date['endTime'].dt.strftime('%Y').iloc[1]} onwards",
-            y_label='Hours [h]')
-    df_avg_day = avg_day_load(df_date)
-    # print(df_avg_day)
-    df_top_artists = top_artists(df_date,10)
-    # print(df_top_artists)
-    df_top_tracks = top_tracks(df_date,10)
-    # print(df_top_tracks)
-    df_top_artists_history = top_artists_history(df_date,df_top_artists.head(5))
-    # print(df_top_artists_history)
-    df_top_artists_most_days = top_artists_most_days(df_date,10)
-    # print(df_top_artists_most_days)
-    plt.show()
+        if end == 0:
+            exit(0)
+        else:
+            # print(df)
+            df_listen_time = load_over_time(df_date)
+            # print(df_listen_time)
+            plot_df(df_listen_time, 'endTime', 'hrPlayed',
+                    title=f"Listening time to Spotify streams per day: {date_desc}",
+                    y_label='Hours [h]')
+            df_avg_day = avg_day_load(df_date)
+            # print(df_avg_day)
+            df_top_artists = top_artists(df_date,10, date_desc)
+            # print(df_top_artists)
+            df_top_tracks = top_tracks(df_date,10, date_desc)
+            # print(df_top_tracks)
+            df_top_artists_history = top_artists_history(df_date,df_top_artists.head(5), date_desc)
+            # print(df_top_artists_history)
+            df_top_artists_most_days = top_artists_most_days(df_date,10, date_desc)
+            # print(df_top_artists_most_days)
+            plt.show()
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
