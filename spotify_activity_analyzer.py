@@ -6,7 +6,7 @@ import matplotlib.dates as mdates
 import seaborn
 import numpy as np
 
-seaborn.set()
+seaborn.set_theme(style="white", palette="pastel")
 
 def ms2hr(ms_val):
     return ms_val / (1000 * 60 * 60)
