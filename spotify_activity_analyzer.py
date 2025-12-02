@@ -217,28 +217,62 @@ def top_artists_most_days(df, top=10):
     fig.autofmt_xdate()
     
     return df
+
+def choose_date_range(df):
+    while True:
+        print("1. Full History")
+        print("2. Choose a Date Range")
+        print("3. Choose a Specific Year")
+        print("4. Choose a Specific Month")
+        print("5. Exit")
+        choice = input("Select an option (1-5): ")
+        df['endTime'] = pd.to_datetime(df['endTime'])
+        if choice == '1':
+            return df
+        
+        elif choice == '2':
+            start_date = input("Enter start date (YYYY-MM-DD): ")
+            end_date = input("Enter end date (YYYY-MM-DD): ")
+            return df[(df['endTime'] >= start_date) & (df['endTime'] <= end_date)]
+        
+        elif choice == '3':
+            year = input("Enter year (YYYY): ")
+            return df[df['endTime'].dt.year == int(year)]
+        
+        elif choice == '4':
+            year = input("Enter year (YYYY): ")
+            month = input("Enter month (1-12): ")
+            return df[(df['endTime'].dt.year == int(year)) & (df['endTime'].dt.month == int(month))]
+        
+        elif choice == '5':
+            print("Exiting...")
+            exit()
     
 def main(stream_file_list):
+
+
     # print(stream_file_list)
     df = file2df(stream_file_list)
     df.rename(columns={'ts':'endTime','master_metadata_album_artist_name':'artistName',
                        'master_metadata_track_name': 'trackName','ms_played':'msPlayed'}, 
                        inplace=True)
+    
+    df_date = choose_date_range(df)
     # print(df)
-    df_listen_time = load_over_time(df)
+    df_listen_time = load_over_time(df_date)
     # print(df_listen_time)
     plot_df(df_listen_time, 'endTime', 'hrPlayed',
-            title=f"Listening time to Spotify streams per day: {df['endTime'].dt.strftime('%Y').iloc[1]} onwards",
+            title=f"Listening time to Spotify streams per day: {df_date['endTime'].dt.strftime('%Y').iloc[1]} onwards",
             y_label='Hours [h]')
-    df_avg_day = avg_day_load(df)
+    df_avg_day = avg_day_load(df_date)
     # print(df_avg_day)
-    df_top_artists = top_artists(df,10)
+    df_top_artists = top_artists(df_date,10)
     # print(df_top_artists)
-    df_top_tracks = top_tracks(df,10)
+    df_top_tracks = top_tracks(df_date,10)
     # print(df_top_tracks)
-    df_top_artists_history = top_artists_history(df,df_top_artists.head(5))
+    df_top_artists_history = top_artists_history(df_date,df_top_artists.head(5))
     # print(df_top_artists_history)
-    df_top_artists_most_days = top_artists_most_days(df,10)
+    df_top_artists_most_days = top_artists_most_days(df_date,10)
     # print(df_top_artists_most_days)
     plt.show()
 
