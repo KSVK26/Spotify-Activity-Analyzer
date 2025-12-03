@@ -185,16 +185,6 @@ def top_artists_history(df, top_artists_df=10, date_desc=''):
 
     return df_top
 
-def file2df(stream_file_list):
-    dfs = []
-    for f_name in stream_file_list:
-         with open(f_name, encoding="utf-8") as f:
-            df_from_json = pd.json_normalize(json.loads(f.read()))
-            dfs.append(df_from_json)
-
-    df = pd.concat(dfs, sort=False)
-    return df 
-
 def top_artists_most_days(df, top=10, date_desc=''):
     df = df.copy()
     df['endTime'] = pd.to_datetime(df['endTime'])
@@ -217,6 +207,16 @@ def top_artists_most_days(df, top=10, date_desc=''):
     fig.autofmt_xdate()
     
     return df
+
+def file2df(stream_file_list):
+    dfs = []
+    for f_name in stream_file_list:
+         with open(f_name, encoding="utf-8") as f:
+            df_from_json = pd.json_normalize(json.loads(f.read()))
+            dfs.append(df_from_json)
+
+    df = pd.concat(dfs, sort=False)
+    return df 
 
 def choose_date_range(df):
     while True:
