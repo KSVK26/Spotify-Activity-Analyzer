@@ -1,12 +1,16 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from narwhals import List
+from pyparsing import Dict
 from config import SPOTIFY_REDIRECT_URI
 from spotify_auth import get_auth_url, get_token_from_code, get_spotify_client
 from models import UserSession, get_db
 from sqlalchemy.orm import Session
 import uuid
 from datetime import datetime, timedelta
+from analysis import analyze_listening_data, normalize_spotify_data
+from schemas import AnalysisResult
 
 app = FastAPI(title="Spotify Activity Analyzer")
 
@@ -66,3 +70,10 @@ def callback(code: str, error: str = None, db: Session = Depends(get_db)):
         "user_id": user["id"],
         "message": "Successfully authenticated with Spotify"
     }
+
+@app.post("/analyze") 
+def analyze_tracks(tracks: List[Dict], start_date: str = None, end_date: str = None):
+    """Analyze listening data and return stats"""
+    df = normalize_spotify_data(tracks)
+    result = analyze_listening_data(df, start_date, end_date)
+    return result
