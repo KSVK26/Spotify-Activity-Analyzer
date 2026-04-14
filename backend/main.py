@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from typing import List, Dict
-from config import SPOTIFY_REDIRECT_URI
+from config import SPOTIFY_REDIRECT_URI, FRONTEND_URL
 from spotify_auth import get_auth_url, get_token_from_code, get_spotify_client
 from models import UserSession, get_db
 from sqlalchemy.orm import Session
@@ -67,13 +67,9 @@ def callback(code: str, error: str = None, db: Session = Depends(get_db)):
     db.add(session)
     db.commit()
 
-    # Redirect to frontend with session ID (frontend URL will be added later)
-    return {
-        "status": "success",
-        "session_id": session.id,
-        "user_id": user["id"],
-        "message": "Successfully authenticated with Spotify"
-    }
+    # Redirect to frontend dashboard with session ID
+    frontend_url = f"{FRONTEND_URL}/dashboard?session_id={session.id}"
+    return RedirectResponse(url=frontend_url)
 
 @app.post("/analyze") 
 def analyze_tracks(tracks: List[Dict], start_date: str = None, end_date: str = None):
