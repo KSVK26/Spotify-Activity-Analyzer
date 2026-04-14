@@ -1,8 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from narwhals import List
-from pyparsing import Dict
+from typing import List, Dict
 from config import SPOTIFY_REDIRECT_URI
 from spotify_auth import get_auth_url, get_token_from_code, get_spotify_client
 from models import UserSession, get_db
@@ -11,6 +10,8 @@ import uuid
 from datetime import datetime, timedelta
 from analysis import analyze_listening_data, normalize_spotify_data
 from schemas import AnalysisResult
+from spotify_api import get_all_recently_played, get_top_artists, get_top_tracks
+from spotify_auth import get_spotify_client
 
 app = FastAPI(title="Spotify Activity Analyzer")
 
@@ -77,3 +78,39 @@ def analyze_tracks(tracks: List[Dict], start_date: str = None, end_date: str = N
     df = normalize_spotify_data(tracks)
     result = analyze_listening_data(df, start_date, end_date)
     return result
+
+@app.get("/api/recently-played")
+def recently_played(session_id: str, hours: int = 24, db: Session = Depends(get_db)):
+    """Fetch user's recently played tracks"""
+    session = db.query(UserSession).filter(UserSession.id == session_id).first()
+    if not session:
+        return {"error": "Session not found"}, 404
+    
+    sp = get_spotify_client(session.access_token)
+    tracks = get_all_recently_played(sp, hours)
+    
+    return {"tracks": tracks, "count": len(tracks)}
+
+@app.get("/api/top-artists")
+def top_artists(session_id: str, time_range: str = "medium_term", db: Session = Depends(get_db)):
+    """Fetch user's top artists"""
+    session = db.query(UserSession).filter(UserSession.id == session_id).first()
+    if not session:
+        return {"error": "Session not found"}, 404
+    
+    sp = get_spotify_client(session.access_token)
+    artists = get_top_artists(sp, time_range)
+    
+    return {"artists": artists}
+
+@app.get("/api/top-tracks")
+def top_tracks_api(session_id: str, time_range: str = "medium_term", db: Session = Depends(get_db)):
+    """Fetch user's top tracks"""
+    session = db.query(UserSession).filter(UserSession.id == session_id).first()
+    if not session:
+        return {"error": "Session not found"}, 404
+    
+    sp = get_spotify_client(session.access_token)
+    tracks = get_top_tracks(sp, time_range)
+    
+    return {"tracks": tracks}
