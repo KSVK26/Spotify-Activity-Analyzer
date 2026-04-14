@@ -12,6 +12,9 @@ from analysis import analyze_listening_data, normalize_spotify_data
 from schemas import AnalysisResult
 from spotify_api import get_all_recently_played, get_top_artists, get_top_tracks
 from spotify_auth import get_spotify_client
+from upload import analyze_uploaded_data
+from fastapi import UploadFile, File, Form
+
 
 app = FastAPI(title="Spotify Activity Analyzer")
 
@@ -114,3 +117,18 @@ def top_tracks_api(session_id: str, time_range: str = "medium_term", db: Session
     tracks = get_top_tracks(sp, time_range)
     
     return {"tracks": tracks}
+
+@app.post("/upload")
+async def upload_files(
+    files: List[UploadFile] = File(...),
+    start_date: str = Form(None),
+    end_date: str = Form(None)
+):
+    """Upload and analyze Spotify JSON files"""
+    contents = []
+    for file in files:
+        content = await file.read()
+        contents.append(content.decode('utf-8'))
+    
+    result = analyze_uploaded_data(contents, start_date, end_date)
+    return result
