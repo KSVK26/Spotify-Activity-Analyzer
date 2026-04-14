@@ -1,6 +1,24 @@
 "use client"
 
 export default function Home() {
+  async function handleLogin() {
+    try {
+      const res = await fetch('http://localhost:8000/auth/login');
+      if (!res.ok) {
+        throw new Error(`Server responded with status ${res.status}`);
+      }
+      const data = await res.json();
+      if (data.auth_url) {
+        window.location.href = data.auth_url;
+      } else {
+        throw new Error('No auth URL returned from server');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      alert(`Could not connect to the backend: ${err instanceof Error ? err.message : 'Unknown error'}. Please make sure the server is running.`);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-green-900 to-black text-white">
       <div className="container mx-auto px-4 py-16">
@@ -36,10 +54,6 @@ export default function Home() {
       </div>
     </main>
   );
-
-  function handleLogin() {
-    window.location.href = 'http://localhost:8000/auth/login';
-  }
 }
 
 function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
